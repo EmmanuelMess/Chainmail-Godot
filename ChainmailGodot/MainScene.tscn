@@ -8,7 +8,7 @@
 transform = Transform( -1.62921e-07, 0, -1, 0, 1, 0, 1, 0, -1.62921e-07, -8.03123, 1.49893, 0 )
 
 [node name="Camera" type="Camera" parent="."]
-transform = Transform( -0.0299977, 0.48831, -0.872154, 0, 0.872547, 0.48853, 0.99955, 0.0146548, -0.0261744, -6.41297, 2.80057, 0 )
+transform = Transform( -0.0299977, 0.48831, -0.872154, 0, 0.872547, 0.48853, 0.99955, 0.0146548, -0.0261744, -41.9236, 27.2843, 16.0999 )
 
 [node name="Spatial" type="Spatial" parent="."]
 script = ExtResource( 1 )
