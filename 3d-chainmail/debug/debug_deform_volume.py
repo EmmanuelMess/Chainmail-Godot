@@ -5,7 +5,7 @@ from volume import Volume, Vector3, Vector3i
 
 def deform_volume():
     size = Vector3i(9, 9, 9)
-    volume = Volume(data=gen_data(size), size=size, deformation_range=Vector3(0.6, 0.6, 0.6), spacing=Vector3(0.2, 0.2, 0.2))
+    volume = Volume(gen_data(size), size, Vector3(0.6, 0.6, 0.6), Vector3(0.2, 0.2, 0.2))
     deformation = Vector3(1, 1, 3)
     deformation_index = Vector3i(7, 7, 8)
     volume.deform(deformation_index, deformation)

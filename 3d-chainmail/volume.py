@@ -1,37 +1,60 @@
 import math
 from dataclasses import dataclass, field
 
-@dataclass
-class Vector3(object):
+
+class Vector3:
     x: float
     y: float
     z: float
 
-@dataclass
-class Vector3i(object):
+    def __init__(self, x: float, y: float, z: float):
+        self.x = x
+        self.y = y
+        self.z = z
+
+
+class Vector3i:
     x: int
     y: int
     z: int
 
-@dataclass
-class Deformation(object):
+    def __init__(self, x: int, y: int, z: int):
+        self.x = x
+        self.y = y
+        self.z = z
+
+    def __hash__(self):
+        return hash("(" + str(self.x) + ", " + str(self.y) + ", " + str(self.z) + ")")
+
+
+class Deformation:
     index: Vector3i
     deformation: Vector3
 
-@dataclass
-class Volume(object):
+    def __init__(self, index: Vector3i, deformation: Vector3):
+        self.index = index
+        self.deformation = deformation
+
+
+class Volume:
     """Deformable volume object"""
     data: list
     size: Vector3i
-    deformation_range: Vector3 = Vector3(0.2, 0.2, 0.2)  # x, y and z range of deformation
-    min_deformation: Vector3 = Vector3(0.04, 0.04, 0.04)  # point at which deformation is ignored
-    spacing: Vector3 = Vector3(1, 1, 1)  # the spacing between the voxels
-    x: list = field(init=False)
-    y: list = field(init=False)
-    z: list = field(init=False)
+    deformation_range: Vector3  # x, y and z range of deformation
+    spacing: Vector3  # the spacing between the voxels
 
-    def __post_init__(self):
+    min_deformation: Vector3 = Vector3(0.04, 0.04, 0.04)  # point at which deformation is ignored
+    x: list
+    y: list
+    z: list
+
+    def __init__(self, data: list, size: Vector3i, deformation_range: Vector3 = Vector3(0.2, 0.2, 0.2), spacing: Vector3 = Vector3(1, 1, 1)):
         """initial (x, y, z) positions of the items of the volume"""
+        self.data = data
+        self.size = size
+        self.deformation_range = deformation_range
+        self.spacing = spacing
+
         check = self.spacing.x > 1 or self.spacing.y > 1 or self.spacing.z > 1
         spacingCorrectionX = self.spacing.x if check else 1
         spacingCorrectionY = self.spacing.y if check else 1
@@ -61,11 +84,11 @@ class Volume(object):
                 for z in range(self.size.x):
                     self.z[x][y].append(z * spacingCorrectionZ)
 
-    def deform(self, index: Vector3i, deformation: Vector3):
+    def deform(self, index: Vector3i, initialDeformation: Vector3):
         """deform positions by deformation vector starting at index"""
-        self._deform_position(index, deformation)
-        sponsors = [Deformation(index, deformation)]
-        sponsor_hist = [index]
+        self._deform_position(index, initialDeformation)
+        sponsors = [Deformation(index, initialDeformation)]
+        sponsor_hist = [hash(index)]
 
         while len(sponsors) > 0:
             de: Deformation = sponsors.pop(0)
@@ -73,20 +96,20 @@ class Volume(object):
             deformation = de.deformation
 
             # keep the sign for negative values
-            sign = Vector3(math.copysign(1, deformation.x), math.copysign(1, deformation.y), math.copysign(1, deformation.z))
+            vecSign = Vector3(math.copysign(1, deformation.x), math.copysign(1, deformation.y), math.copysign(1, deformation.z))
             deformation = Vector3(abs(deformation.x) - self.deformation_range.x, abs(deformation.y) - self.deformation_range.y, abs(deformation.z) - self.deformation_range.z)
             deformation = Vector3(max(0, deformation.x), max(0, deformation.y), max(0, deformation.z))
             if deformation.x < self.min_deformation.x and deformation.y < self.min_deformation.y and deformation.z < self.min_deformation.z:
                 continue
-            deformation = Vector3(sign.x * deformation.x, sign.y * deformation.y, sign.z * deformation.z)
+            deformation = Vector3(vecSign.x * deformation.x, vecSign.y * deformation.y, vecSign.z * deformation.z)
 
             # get and deform neighbors
             neighbors = self._get_neighbors(sponsor, sponsor_hist)
             if len(neighbors) > 0:
                 self._deform_positions(neighbors, deformation)
-                neighbors_deformation = [Deformation(i, deformation) for i in neighbors]
-                sponsors.extend(neighbors_deformation)
-                sponsor_hist.extend(neighbors)
+                for i in neighbors:
+                    sponsors.append(Deformation(i, deformation))
+                    sponsor_hist.append(hash(i))
 
     def get_position(self, index: Vector3i) -> Vector3:
         """return the position of the index"""
@@ -103,38 +126,35 @@ class Volume(object):
         for vec in indices:
             self._deform_position(vec, deformation)
 
-    def _get_neighbors(self, index: Vector3i, sponsor_hist: list = None) -> list:
+    def _get_neighbors(self, index: Vector3i, sponsor_hist: list = []) -> list:
         """return the possible 6 neighbors of the """
-        if sponsor_hist is None:
-            sponsor_hist = []
-
         neighbors = []
 
         if index.x > 0:
             item = Vector3i(index.x - 1, index.y, index.z)
-            if item not in sponsor_hist:
+            if hash(item) not in sponsor_hist:
                 neighbors.append(item)
         if index.x < self.size.x - 1:
             item = Vector3i(index.x + 1, index.y, index.z)
-            if item not in sponsor_hist:
+            if hash(item) not in sponsor_hist:
                 neighbors.append(item)
 
         if index.y > 0:
             item = Vector3i(index.x, index.y - 1, index.z)
-            if item not in sponsor_hist:
+            if hash(item) not in sponsor_hist:
                 neighbors.append(item)
         if index.y < self.size.y - 1:
             item = Vector3i(index.x, index.y + 1, index.z)
-            if item not in sponsor_hist:
+            if hash(item) not in sponsor_hist:
                 neighbors.append(item)
 
         if index.z > 0:
             item = Vector3i(index.x, index.y, index.z - 1)
-            if item not in sponsor_hist:
+            if hash(item) not in sponsor_hist:
                 neighbors.append(item)
         if index.z < self.size.z - 1:
             item = Vector3i(index.x, index.y, index.z + 1)
-            if item not in sponsor_hist:
+            if hash(item) not in sponsor_hist:
                 neighbors.append(item)
 
         return neighbors
