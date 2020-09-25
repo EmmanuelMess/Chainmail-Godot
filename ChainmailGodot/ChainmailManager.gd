@@ -1,13 +1,12 @@
 extends Spatial
 
-const HOR_DIST = 1
-const VER_DIST = 1
-const LINELEN = sqrt(HOR_DIST*HOR_DIST + VER_DIST * VER_DIST)
+const HOR_DIST = 0.8
+const VER_DIST = 0.85
 
 var points = []
 var sticks = []
 var bounce = 0.9
-var gravity = -0.001
+var gravity = -0.02
 var friction = 0.999
 
 class Point:
@@ -27,10 +26,10 @@ class Stick:
 	var p1: Point
 	var length: float
 	
-	func _init(p0: Point, p1: Point, length: float):
+	func _init(p0: Point, p1: Point):
 		self.p0 = p0
 		self.p1 = p1
-		self.length = length
+		self.length = (p0.currentPos - p1.currentPos).length()
 		
 var rng = RandomNumberGenerator.new()
 
@@ -41,34 +40,26 @@ func _ready():
 	generate_lattice(20, 20)
 
 	for chainLink in points:
-		var mesh1 := MeshInstance.new()
-		mesh1.mesh = SphereMesh.new()
-		mesh1.mesh.radius = 0.1
-		mesh1.mesh.height = 0.1
-		mesh1.translate(chainLink.currentPos)
-		add_child(mesh1)
-		chainLink.mesh = mesh1
-
-		"""
 		if chainLink.center:
 			var mesh := MeshInstance.new()
 			mesh.mesh = load("res://torus.obj") 
 			mesh.translate(chainLink.currentPos)
 			add_child(mesh)
 			chainLink.mesh = mesh
-		"""
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
 	for i in range(len(points)):
-		points[i].currentPos = points[i].mesh.transform.origin
+		if points[i].center:
+			points[i].currentPos = points[i].mesh.transform.origin
 	
 	updatePoints()
 	for i in range(10):
 		updateSticks()
 	
 	for i in range(len(points)):
-		points[i].mesh.transform.origin = points[i].currentPos
+		if points[i].center:
+			points[i].mesh.transform.origin = points[i].currentPos
 
 func updatePoints():
 	for i in range(len(points)):
@@ -129,10 +120,10 @@ func generate_lattice(width, height):
 		
 			points.append(middlePoint)
 		  
-			sticks.append(Stick.new(topPoints[i], middlePoint, LINELEN))
-			sticks.append(Stick.new(topPoints[i+1], middlePoint, LINELEN))
-			sticks.append(Stick.new(bottomPoints[i], middlePoint, LINELEN))
-			sticks.append(Stick.new(bottomPoints[i+1], middlePoint, LINELEN))
+			sticks.append(Stick.new(topPoints[i], middlePoint))
+			sticks.append(Stick.new(topPoints[i+1], middlePoint))
+			sticks.append(Stick.new(bottomPoints[i], middlePoint))
+			sticks.append(Stick.new(bottomPoints[i+1], middlePoint))
 		
 		prevTop = bottomPoints
 		
